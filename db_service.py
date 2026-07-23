@@ -1,14 +1,23 @@
-# System Prompts for different projects
-# (In production, this would be fetched from Postgres/Supabase DB)
-PROJECT_PROMPTS = {
-    "support_bot": "You are a polite customer support agent for Yellow.ai. Answer concisely and professionally.",
-    "sales_bot": "You are an enthusiastic sales assistant. Highlight product features and encourage users to book a demo.",
-    "default": "You are a helpful AI assistant."
-}
+# Temporary in-memory / file knowledge store per project_id
+project_knowledge_base = {}
 
 def get_system_prompt(project_id: str) -> str:
-    """
-    Fetches system prompt based on project_id.
-    Falls back to default prompt if project_id is not found.
-    """
-    return PROJECT_PROMPTS.get(project_id, PROJECT_PROMPTS["default"])
+    base_prompts = {
+        "support_bot": "You are Yellow.ai's official AI assistant. Answer queries politely and accurately.",
+        "sales_bot": "You are an aggressive sales assistant aiming to convert leads.",
+        "default": "You are a helpful AI assistant."
+    }
+    
+    prompt = base_prompts.get(project_id, base_prompts["default"])
+    
+    # Check if any uploaded document context exists for this project (Basic RAG)
+    if project_id in project_knowledge_base:
+        doc_context = project_knowledge_base[project_id]
+        prompt += f"\n\n--- ADDITIONAL CONTEXT FROM UPLOADED DOCUMENTS ---\n{doc_context}\n--------------------------------------------------"
+        
+    return prompt
+
+def save_project_document(project_id: str, content: str):
+    """Saves/appends extracted file text into the project context."""
+    existing = project_knowledge_base.get(project_id, "")
+    project_knowledge_base[project_id] = (existing + "\n\n" + content).strip()
